@@ -1,0 +1,14 @@
+{
+    "name": "futureactivities/magento2-products",
+    "description": "A Magento 2 API endpoint to provide layered navigation & parent products.",
+    "version": "1.0.0",
+    "type": "magento2-module",
+    "require": {
+    },
+    "autoload": {
+        "files": [ "registration.php" ],
+        "psr-4": {
+          "FutureActivities\\Products\\": ""
+        }
+    }
+}

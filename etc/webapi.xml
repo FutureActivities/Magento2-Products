@@ -1,0 +1,17 @@
+<?xml version="1.0"?>
+<routes xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:noNamespaceSchemaLocation="../../../../../app/code/Magento/Webapi/etc/webapi.xsd">
+     <!-- Get products list - Returns the parent instead of child -->
+    <route url="/V1/fa/products" method="GET">
+        <service class="FutureActivities\Products\Api\ProductListInterface" method="getProductList"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+    <!-- Get product filter attributes & values -->
+    <route url="/V1/fa/filter" method="GET">
+        <service class="FutureActivities\Products\Api\FilterInterface" method="getProductFilter"/>
+        <resources>
+            <resource ref="anonymous"/>
+        </resources>
+    </route>
+</routes>
