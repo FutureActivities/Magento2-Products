@@ -63,9 +63,9 @@ You must also set the filterable fields JSON in the Magento configuration, examp
 `parent` is available on categories only and will only show in the filter once
 a value for the parent filter has been selected.
 
-## To Do
+### To Do
 
-- Move/chnage admin area JSON configuration
+- Move/change admin area JSON configuration
 - Add option to determine the type of filtering: Default, Multi Select
 - Update to allow multi select working based on the following rule:
 -- Filter the filers except for the last selected - which is filtered based on previous selections.
