@@ -14,6 +14,7 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
     protected $categoryCollection;
     
     protected $filterableList = [];
+    protected $filterBehaviour = 'default';
     
     public function __construct(\FutureActivities\Products\Helper\Config $config,
         \FutureActivities\Products\Helper\Product $helper,
@@ -28,6 +29,7 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
         $this->categoryCollection = $categoryCollection;
         
         $this->filterableList = json_decode($this->config->getGeneralConfig('filterableFields', $this->store->getStore()->getId()));
+        $this->filterBehaviour = $this->config->getGeneralConfig('behaviour', $this->store->getStore()->getId()) ?: 'default';
     }
     
     /**
@@ -39,6 +41,8 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
     */
     public function getProductFilter(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
     {
+        $prevCollection = $this->getPreviousCollection($searchCriteria);
+        
         $activeFilters = $this->reformatFilters($searchCriteria);
         $activeFiltersKeys = array_keys($activeFilters);
         $lastFilterAttr = end($activeFiltersKeys);
@@ -47,7 +51,7 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
         
         $collection->load();
         $collection->addCategoryIds()->addMinimalPrice();
-        
+
         $products = $collection->getItems();
         
         foreach ($this->filterableList AS $filter) 
@@ -62,7 +66,8 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
                     break;
                     
                 case 'attribute':
-                    $attributeValues = $this->parseAttributeFilter($filter, $products);
+                    $attributeProducts = $this->filterBehaviour == 'multiple' && $filter->id == $lastFilterAttr ? $prevCollection->getItems() : $products;
+                    $attributeValues = $this->parseAttributeFilter($filter, $attributeProducts);
                     $handle = $filter->id;
                     $type = 'list';
                     $logicalAnd = $filter->logicalAnd ?? false;
@@ -111,6 +116,22 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
         }
         
         return $this->attributes;
+    }
+    
+    /**
+     * Get the product collection with the last filter group removed
+     * 
+     * @param \Magento\Framework\Api\SearchCriteriaInterface $searchCriteria
+     */
+    private function getPreviousCollection(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
+    {
+        $prev = clone $searchCriteria;
+        
+        $filterGroups = $prev->getFilterGroups();
+        array_pop($filterGroups);
+        $prev->setFilterGroups($filterGroups);
+        
+        return $this->helper->buildCollection($prev);
     }
     
     /**

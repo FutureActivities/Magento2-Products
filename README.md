@@ -63,10 +63,17 @@ You must also set the filterable fields JSON in the Magento configuration, examp
 `parent` is available on categories only and will only show in the filter once
 a value for the parent filter has been selected.
 
-### To Do
+### Filtering Behaviour
 
-- Move/change admin area JSON configuration
-- Add option to determine the type of filtering: Default, Multi Select
-- Update to allow multi select working based on the following rule:
--- Filter the filers except for the last selected - which is filtered based on previous selections.
--- Implement by getting the product collection with the last selected filter removed.
+By default, the filter will only show attribute values applicable to the collection of products
+found with the search criteria.
+
+However, if you set the behaviour to 'Multiple' in the admin configuration, then the attribute that 
+matches the last filter will be filtered based on a collection of products with the last filter group 
+removed. This will allow you to select multiple options for the last selected attribute.
+
+## Changelog
+
+## v1.1
+
+- Added an option to adjust how the filtering works
