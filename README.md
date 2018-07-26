@@ -63,6 +63,58 @@ You must also set the filterable fields JSON in the Magento configuration, examp
 `parent` is available on categories only and will only show in the filter once
 a value for the parent filter has been selected.
 
+### Example Output
+
+    [
+        {
+            "handle": "color",
+            "name": "Color",
+            "field": "color",
+            "type": "list",
+            "logical_and": "",
+            "condition": "eq",
+            "is_active": false,
+            "values": [
+                {
+                    "handle": "83",
+                    "name": "Grey",
+                    "count": 20
+                },
+                {
+                    "handle": "85",
+                    "name": "White",
+                    "count": 25
+                }
+            ]
+        },
+        {
+            "handle": "size",
+            "name": "Size",
+            "field": "size",
+            "type": "list",
+            "logical_and": "",
+            "condition": "eq",
+            "is_active": false,
+            "values": [
+                {
+                    "handle": "133",
+                    "name": "5Kg",
+                    "count": 1
+                },
+                {
+                    "handle": "210",
+                    "name": "10kg",
+                    "count": 12
+                },
+                {
+                    "handle": "218",
+                    "name": "15kg",
+                    "count": 8
+                }
+            ]
+        }
+    ]
+
 ### Filtering Behaviour
 
 By default, the filter will only show attribute values applicable to the collection of products
