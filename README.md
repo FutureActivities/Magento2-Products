@@ -77,3 +77,4 @@ removed. This will allow you to select multiple options for the last selected at
 ## v1.1
 
 - Added an option to adjust how the filtering works
+- Added product counts

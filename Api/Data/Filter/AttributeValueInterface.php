@@ -23,6 +23,14 @@ interface AttributeValueInterface
     public function setName($name);
     
     /**
+     * Set the attribute product count
+     * 
+     * @param int $count
+     * @return null
+     */
+    public function setCount($count);
+    
+    /**
      * Get the attribute handle
      * 
      * @return string
@@ -35,4 +43,11 @@ interface AttributeValueInterface
      * @return string
      */
     public function getName();
+    
+    /**
+     * Get the attribute product count
+     * 
+     * @return int
+     */
+    public function getCount();
 }

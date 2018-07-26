@@ -7,6 +7,7 @@ class AttributeValue implements AttributeValueInterface
 {
     protected $handle = '';
     protected $name = '';
+    protected $count = 0;
     protected $condition = 'eq';
 
     /**
@@ -31,6 +32,18 @@ class AttributeValue implements AttributeValueInterface
         $this->name = $name;
     }
     
+        
+    /**
+     * Set the attribute product count
+     * 
+     * @param int $count
+     * @return null
+     */
+    public function setCount($count)
+    {
+        $this->count = $count;
+    }
+    
     /**
      * Get the attribute handle
      * 
@@ -49,5 +62,15 @@ class AttributeValue implements AttributeValueInterface
     public function getName()
     {
         return $this->name;
+    }
+    
+    /**
+     * Get the attribute product count
+     * 
+     * @return int
+     */
+    public function getCount()
+    {
+        return $this->count;
     }
 }

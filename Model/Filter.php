@@ -8,7 +8,8 @@ use \FutureActivities\Products\Model\Filter\AttributeValue;
 class Filter implements \FutureActivities\Products\Api\FilterInterface
 {
     protected $config;
-    protected $helper;
+    protected $productHelper;
+    protected $filterHelper;
     protected $store;
     protected $request;
     protected $categoryCollection;
@@ -17,13 +18,15 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
     protected $filterBehaviour = 'default';
     
     public function __construct(\FutureActivities\Products\Helper\Config $config,
-        \FutureActivities\Products\Helper\Product $helper,
+        \FutureActivities\Products\Helper\Product $productHelper,
+        \FutureActivities\Products\Helper\Filter $filterHelper,
         \Magento\Store\Model\StoreManagerInterface $store, 
         \Magento\Framework\App\Request\Http $request,
         \Magento\Catalog\Model\ResourceModel\Category\CollectionFactory $categoryCollection)
     {
         $this->config = $config;
-        $this->helper = $helper;
+        $this->productHelper = $productHelper;
+        $this->filterHelper = $filterHelper;
         $this->store = $store;
         $this->request = $request;
         $this->categoryCollection = $categoryCollection;
@@ -41,81 +44,62 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
     */
     public function getProductFilter(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
     {
+        $result = [];
+        
+        // Collection/products with last filter group removed
         $prevCollection = $this->getPreviousCollection($searchCriteria);
+        $prevProducts = $prevCollection->getItems();
         
-        $activeFilters = $this->reformatFilters($searchCriteria);
-        $activeFiltersKeys = array_keys($activeFilters);
-        $lastFilterAttr = end($activeFiltersKeys);
+        // Get the last filter option
+        $lastFilter = $this->filterHelper->getLastFilter($searchCriteria);
         
-        $collection = $this->helper->buildCollection($searchCriteria);
-        
+        // Build product collection with search criteria
+        $collection = $this->productHelper->buildCollection($searchCriteria);
         $collection->load();
         $collection->addCategoryIds()->addMinimalPrice();
-
         $products = $collection->getItems();
-        
+
+        // Loop through the list of defined filters
         foreach ($this->filterableList AS $filter) 
         {
-            switch($filter->type) {
-                case 'category':
-                    $parent = $this->getParentFilter($filter);
-                    $attributeValues = $this->parseCategoryFilter($filter, $products, $parent, $this->helper->getFiltersByField($searchCriteria, 'category_id'));
-                    $handle = 'category_id';
-                    $type = 'list';
-                    $logicalAnd = true;
-                    break;
-                    
-                case 'attribute':
-                    $attributeProducts = $this->filterBehaviour == 'multiple' && $filter->id == $lastFilterAttr ? $prevCollection->getItems() : $products;
-                    $attributeValues = $this->parseAttributeFilter($filter, $attributeProducts);
-                    $handle = $filter->id;
-                    $type = 'list';
-                    $logicalAnd = $filter->logicalAnd ?? false;
-                    break;
-                    
-                case 'price':
-                    $attributeValues = $this->parsePriceFilter($collection);
-                    $handle = 'price';
-                    $type = 'slider';
-                    $logicalAnd = true;
-                    break;
-                    
-                default: 
-                    $attributeValues = [];
-                    $handle = $filter->id;
-                    $type = 'list';
-                    $logicalAnd = $filter->logicalAnd ?? false;
-            }
-            
-            // No values? Then lets not show this attribute
-            if (count($attributeValues) == 0) continue;
-            
             $attribute = new Attribute();
             $attribute->setHandle($filter->handle);
             $attribute->setName($filter->name);
-            $attribute->setField($handle);
-            $attribute->setType($type);
-            $attribute->setLogicalAnd($logicalAnd);
             if (isset($filter->condition)) $attribute->setCondition($filter->condition);
             
-            $active = false;
-            foreach ($attributeValues AS $valueHandle => $name) {
-                $value = new AttributeValue();
-                $value->setHandle($valueHandle);
-                $value->setName($name);
-                $attribute->addValue($value);
-                
-                // Check if this is an active filter
-                if (isset($activeFilters[$handle]) && in_array($valueHandle, $activeFilters[$handle]))
-                    $active = true;
+            switch($filter->type) {
+                case 'category':
+                    $parent = $this->getParentFilter($filter);
+                    $attribute->setField('category_id');
+                    $attribute->setType('list');
+                    $attribute->setLogicalAnd(true);
+                    $this->setAttributeValues($searchCriteria, $collection, $this->parseCategoryFilter($filter, $products, $parent, $this->productHelper->getFiltersByField($searchCriteria, 'category_id')), $attribute);
+                    break;
+                    
+                case 'attribute':
+                    $attribute->setField($filter->id);
+                    $attribute->setType('list');
+                    $attribute->setLogicalAnd($filter->logicalAnd ?? false);
+                    $attributeCollection = $this->filterBehaviour == 'multiple' && $filter->handle == $lastFilter->getField() ? $prevCollection : $collection;
+                    $attributeProducts = $this->filterBehaviour == 'multiple' && $filter->handle == $lastFilter->getField() ? $prevProducts : $products;
+                    $this->setAttributeValues($searchCriteria, $attributeCollection, $this->parseAttributeFilter($filter, $attributeProducts), $attribute);
+                    break;
+                    
+                case 'price':
+                    $attribute->setField('price');
+                    $attribute->setType('slider');
+                    $attribute->setLogicalAnd(true);
+                    $this->setAttributeValues($searchCriteria, $collection, $this->parsePriceFilter($collection), $attribute);
+                    break;
             }
             
-            $attribute->setIsActive($active);
+            // No values? Then lets not show this attribute
+            if (count($attribute->getValues()) == 0) continue;
             
-            $this->attributes[$filter->handle] = $attribute;
+            $result[$filter->handle] = $attribute;
         }
         
-        return $this->attributes;
+        return $result;
     }
     
     /**
@@ -123,35 +107,62 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
      * 
      * @param \Magento\Framework\Api\SearchCriteriaInterface $searchCriteria
      */
-    private function getPreviousCollection(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
+    protected function getPreviousCollection(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
     {
-        $prev = clone $searchCriteria;
-        
-        $filterGroups = $prev->getFilterGroups();
-        array_pop($filterGroups);
-        $prev->setFilterGroups($filterGroups);
-        
-        return $this->helper->buildCollection($prev);
+        $searchCriteria = $this->filterHelper->removeLastFilterGroup(clone $searchCriteria);
+        return $this->productHelper->buildCollection($searchCriteria);
     }
     
     /**
-     * Reformat the Magento search criteria into a more usable format
+     * Reformat attribute values
      * 
      * @param \Magento\Framework\Api\SearchCriteriaInterface $searchCriteria
+     * @param Object $productCollection
+     * @param array $attributeValues
+     * @param \FutureActivities\Products\Model\Filter\Attribute $attribute
      */
-    private function reformatFilters(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
+    protected function setAttributeValues($searchCriteria, $productCollection, $attributeValues, &$attribute)
     {
-        $result = [];
+        $active = false;
+        foreach ($attributeValues AS $valueHandle => $name) {
+            
+            $attributeCollection = clone $productCollection;
+            $attributeCollection->clear();
+            if ($attribute->getField() == 'category_id')
+                $attributeCollection->addCategoriesFilter(['in' => [$valueHandle]]);
+            else
+                $attributeCollection->addAttributeToFilter($attribute->getField(), $valueHandle);
+    
+            $value = new AttributeValue();
+            $value->setHandle($valueHandle);
+            $value->setName($name);
+            $value->setCount($attributeCollection->getSize());
+            $attribute->addValue($value);
+            
+            if ($this->isAttributeActive($searchCriteria, $attribute->getHandle(), $valueHandle))
+                $active = true;
+        }
+        
+        $attribute->setIsActive($active);
+    }
+    
+    /**
+     * Check if an attribute value is currently active
+     * 
+     * @param \Magento\Framework\Api\SearchCriteriaInterface $searchCriteria 
+     * @param string $handle
+     * @param string $valueHandle
+     */
+    protected function isAttributeActive($searchCriteria, $handle, $valueHandle)
+    {
         foreach ($searchCriteria->getFilterGroups() AS $filterGroup) {
             foreach ($filterGroup->getFilters() AS $filter) {
-                if (isset($result[$filter->getField()]))
-                    $result[$filter->getField()][] = $filter->getValue();
-                else
-                    $result[$filter->getField()] = [$filter->getValue()];
+                if ($filter->getField() == $handle && $filter->getValue() == $valueHandle)
+                    return true;
             }
         }
         
-        return $result;
+        return false;
     }
     
     /**
@@ -163,7 +174,7 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
      * @param int $level How far down the tree are we
      * @parem boolean $isActive Set the filter active value
      */
-    private function getParentFilter($filter, $level = 1, $isActive = false)
+    protected function getParentFilter($filter, $level = 1, $isActive = false)
     {
         if (!isset($filter->parent))
             return null;
@@ -201,7 +212,7 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
      * @param int[] $selectedIds
      * @return array
      */
-    private function parseCategoryFilter($filter, $products, $parent = null, $selectedIds = [])
+    protected function parseCategoryFilter($filter, $products, $parent = null, $selectedIds = [])
     {
         $categoryIds = [];
         foreach ($products as $product)
@@ -227,7 +238,7 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
      * @param Object $filter
      * @param array $products
      */
-    private function parseAttributeFilter($filter, $products)
+    protected function parseAttributeFilter($filter, $products)
     {
         $result = [];
         
@@ -281,7 +292,7 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
      * 
      * @param $collection
      **/
-    private function parsePriceFilter($collection)
+    protected function parsePriceFilter($collection)
     {
         $result = [];
         
