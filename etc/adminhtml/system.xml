@@ -21,6 +21,11 @@
                     <comment><![CDATA[Default behaviour is to update the filters and remove options no longer applicable.<br />
                     Multiple will update the attribute that matches the last filter group based on a collection of products with the last filter group removed - allowing you to select multiple options.]]></comment>
                 </field>
+                <field id="parentCount" translate="label" type="select" sortOrder="1" showInDefault="1" showInWebsite="0" showInStore="0">
+                    <label>Count Parents</label>
+                    <source_model>Magento\Config\Model\Config\Source\Yesno</source_model>
+                    <comment>For the product count, return the count of parent products instead of the default count of all child products.</comment>
+                </field>
             </group>
         </section>
     </system>
