@@ -43,7 +43,9 @@ class Product extends AbstractHelper
         }
         
         // Add the parent ID to the collection
-        $collection->getSelect()->joinLeft(
+        $collection->getSelect()->columns(
+             array(new \Zend_Db_Expr("IFNULL(`catalog_product_super_link`.`parent_id`,`e`.`entity_id`) as top_product"))
+        )->joinLeft(
             'catalog_product_super_link',
             'e.entity_id = catalog_product_super_link.product_id'
         )->group('e.entity_id');
@@ -64,16 +66,13 @@ class Product extends AbstractHelper
             $collection->getSelect()->order('catalog_category_product.position '. $position);
         }
         
-        // Get a list of all the product IDs and use the parent if available
-        $productIds = [];
-        foreach ($collection->getItems() AS $product)
-            $productIds[] = $product->getParentId() ?: $product->getId();
-        $productIds = $this->uniqueProducts($productIds, $searchCriteria);
+        // Get a list of all the product IDs
+        $productIds = $this->uniqueProducts($collection->getColumnValues('top_product'), $searchCriteria);
         
         if (count($productIds) == 0)
             return $collection;
         
-        // Rebuild the collection using the new list of IDs
+        // Build a new collection using the new list of IDs
         $parentCollection = $this->collectionFactory->create();
         $this->extensionAttributesJoinProcessor->process($parentCollection);
         $parentCollection->addAttributeToSelect('*');

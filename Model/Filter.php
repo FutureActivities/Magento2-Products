@@ -145,7 +145,6 @@ class Filter implements \FutureActivities\Products\Api\FilterInterface
             $criteria->setFilterGroups($filterGroups);
            
             $collection = $this->productHelper->buildCollection($criteria, $this->parentCount);
-            
             if ($collection->getSize() == 0) continue;
             
             $value = new AttributeValue();
