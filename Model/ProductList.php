@@ -35,7 +35,7 @@ class ProductList implements ProductListInterface
         $searchCriteria->setPageSize(null);
         $searchCriteria->setCurrentPage(null);
         
-        $collection = $this->helper->buildCollection($searchCriteria, true);
+        $collection = $this->helper->buildCollection($searchCriteria, $this->_determineParentUse($searchCriteria));
         $collection->setPageSize($pageSize);
         $collection->setCurPage($currPage);
         
@@ -54,5 +54,28 @@ class ProductList implements ProductListInterface
         $searchResult->setTotalCount($collection->getSize());
 
         return $searchResult;
+    }
+    
+    /**
+     * Based on the search criteria, determine whether the products are shown
+     * as group or ungrouped.
+     * 
+     * @param $searchCriteria
+     * 
+     * @return boolean
+     */ 
+    private function _determineParentUse(\Magento\Framework\Api\SearchCriteriaInterface $searchCriteria)
+    {
+        foreach ($searchCriteria->getFilterGroups() as $group) {
+            $filter = $group->getFilters();
+            
+            foreach ($filter as $item) {
+                if ($item->getField() === 'type_id' && $item->getValue() === 'simple') {
+                    return false;
+                }
+            }
+        }
+        
+        return true;
     }
 }
