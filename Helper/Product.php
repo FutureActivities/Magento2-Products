@@ -39,6 +39,7 @@ class Product extends AbstractHelper
         
         if (!$useParent) {
             $this->collectionProcessor->process($searchCriteria, $collection);
+            $this->sortByCategoryPosition($searchCriteria, $collection);
             return $collection;
         }
         
@@ -51,18 +52,8 @@ class Product extends AbstractHelper
         // Apply the search criteria on the child products
         $this->collectionProcessor->process($searchCriteria, $collection);
         
-        // Check for sorting by category index position, must have category_id filter for this to work!
-        $position = $this->getSortOrder($searchCriteria, 'cat_index_position');
-        $categoryIds = $this->getFiltersByField($searchCriteria, 'category_id');
-        if ($position && !empty($categoryIds)) {
-            $join = sprintf('e.entity_id = catalog_category_product.product_id AND catalog_category_product.category_id IN (\'%s\')', implode('\',\'', $categoryIds));
-            $collection->getSelect()->joinLeft(
-                'catalog_category_product',
-                $join,
-                array('position' => 'position')
-            );
-            $collection->getSelect()->order('catalog_category_product.position '. $position);
-        }
+        // Check for sorting by category index position
+        $this->sortByCategoryPosition($searchCriteria, $collection);
         
         // Get a list of all the product IDs and use the parent if available
         $productIds = [];
@@ -158,5 +149,27 @@ class Product extends AbstractHelper
             return array_reverse(array_unique(array_reverse($productIds)));
             
         return array_unique($productIds);
+    }
+    
+    /**
+     * Sort a collection by the category position.
+     * Must have category_id filter for this to work!
+     */
+    private function sortByCategoryPosition($searchCriteria, &$collection)
+    {
+        $position = $this->getSortOrder($searchCriteria, 'cat_index_position');
+        $categoryIds = $this->getFiltersByField($searchCriteria, 'category_id');
+        
+        if (!$position || empty($categoryIds))
+            return;
+        
+        $join = sprintf('e.entity_id = catalog_category_product.product_id AND catalog_category_product.category_id IN (\'%s\')', implode('\',\'', $categoryIds));
+        $collection->getSelect()->joinLeft(
+            'catalog_category_product',
+            $join,
+            array('position' => 'position')
+        );
+        
+        $collection->getSelect()->order('catalog_category_product.position '. $position);
     }
 }

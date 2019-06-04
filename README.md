@@ -126,7 +126,11 @@ removed. This will allow you to select multiple options for the last selected at
 
 ## Changelog
 
-## v1.1
+### v1.2
+
+- Allow sorting by category position if not using parent product
+
+### v1.1
 
 - Added an option to adjust how the filtering works
 - Added product counts
