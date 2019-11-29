@@ -162,8 +162,13 @@ class Product extends AbstractHelper
         
         if (!$position || empty($categoryIds))
             return;
+            
+        // Ensure all IDs are integers
+        $filteredCategoryIds = [];
+        foreach($categoryIds AS $id)
+            $filteredCategoryIds[] = intval($id);
         
-        $join = sprintf('e.entity_id = catalog_category_product.product_id AND catalog_category_product.category_id IN (\'%s\')', implode('\',\'', $categoryIds));
+        $join = sprintf('e.entity_id = catalog_category_product.product_id AND catalog_category_product.category_id IN (\'%s\')', implode('\',\'', $filteredCategoryIds));
         $collection->getSelect()->joinLeft(
             'catalog_category_product',
             $join,

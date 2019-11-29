@@ -126,6 +126,10 @@ removed. This will allow you to select multiple options for the last selected at
 
 ## Changelog
 
+### v1.2.1
+
+- Fix SQL injection vulnerability
+
 ### v1.2
 
 - Allow sorting by category position if not using parent product
