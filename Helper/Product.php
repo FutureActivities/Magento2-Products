@@ -155,7 +155,7 @@ class Product extends AbstractHelper
      * Sort a collection by the category position.
      * Must have category_id filter for this to work!
      */
-    private function sortByCategoryPosition($searchCriteria, &$collection)
+    public function sortByCategoryPosition($searchCriteria, &$collection)
     {
         $position = $this->getSortOrder($searchCriteria, 'cat_index_position');
         $categoryIds = $this->getFiltersByField($searchCriteria, 'category_id');
